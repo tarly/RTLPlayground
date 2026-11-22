@@ -1,0 +1,42 @@
+name: Build ZX-SWTG024AS
+
+on:
+  push:
+    paths:
+      - "machine/ZX-SWTG024AS.*"
+      - "config.txt"
+      - ".github/workflows/build-zx.yml"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:trixie
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            make gcc g++ pkg-config bison flex libboost-dev patch \
+            bzip2 curl ca-certificates xxd python3 libjson-c-dev zlib1g-dev git
+      - name: Build
+        run: |
+          make CI=1 MACHINE=ZX-SWTG024AS \
+            VERSION=0.2.2 \
+            OUTPUT_DIR=dist OUTPUT_NAME=ZX-SWTG024AS-V0.2.2.bin
+      - name: Verify 512 KB
+        run: |
+          test -f dist/ZX-SWTG024AS-V0.2.2.bin
+          test "$(stat -c%s dist/ZX-SWTG024AS-V0.2.2.bin)" -eq 524288
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZX-SWTG024AS-V0.2.2
+          path: dist/ZX-SWTG024AS-V0.2.2.bin
+          if-no-files-found: error

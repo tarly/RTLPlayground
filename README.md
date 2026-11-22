@@ -1,7 +1,7 @@
-﻿# ZX-SWTG024AS — RTLPlayground firmware
+# ZX-SWTG024AS - RTLPlayground firmware
 
 Firmware and board support for the **ZX-SWTG024AS**
-(PCB `PCB-SWTG024AS-V1.0-16584`), a RTL8372 4 × 2.5G + 2 × SFP+ switch.
+(PCB `PCB-SWTG024AS-V1.0-16584`), a RTL8372 4 x 2.5G + 2 x SFP+ switch.
 
 ## Status
 
@@ -10,7 +10,7 @@ Firmware and board support for the **ZX-SWTG024AS**
 | Model | `ZX-SWTG024AS` |
 | PCB | `PCB-SWTG024AS-V1.0-16584` |
 | SoC | RTL8372 |
-| Ports | 4 × 2.5G RJ45 + 2 × SFP+ |
+| Ports | 4 x 2.5G RJ45 + 2 x SFP+ |
 | Firmware | `V0.2.2` |
 | Image | 512 KB, no 4 MB padding |
 
@@ -42,23 +42,22 @@ Enclosure definition:
 SFP5/6            -> single green
 ```
 
-Known hardware note: 1 amber and 2/4 green are dim on this unit; brightness is
-not individually controllable from the LED engine. This is not a firmware bug.
+Known hardware note: 1 amber and 2/4 green are dim on this unit. Brightness is
+not individually controllable from the LED engine.
 
 ## Build
 
 ```sh
 make MACHINE=ZX-SWTG024AS \
      CONFIG=config/default.txt \
-     VERSION=0.2.1
+     VERSION=0.2.2
 ```
 
 The image is exactly 524288 bytes.
 
 ## Flash
 
-This board has no stock firmware backup on the current unit. Use an external
-programmer, write the 512 KB image, verify, then power on.
+Use an external programmer, write the 512 KB image, verify, then power on.
 
 ## Documentation
 
@@ -68,8 +67,7 @@ programmer, write the 512 KB image, verify, then power on.
 
 ## CI
 
-`ci/build-zx.yml` builds the image and checks the 512 KB size. See
-[ci/README.md](ci/README.md) for how to enable it on GitHub.
+`.github/workflows/build-zx.yml` builds the image and checks the 512 KB size.
 
 ## Chinese
 

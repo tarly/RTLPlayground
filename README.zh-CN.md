@@ -1,7 +1,7 @@
-﻿# ZX-SWTG024AS — RTLPlayground 固件
+# ZX-SWTG024AS - RTLPlayground 固件
 
 适用于 **ZX-SWTG024AS**，PCB `PCB-SWTG024AS-V1.0-16584`，RTL8372，
-4 × 2.5G RJ45 + 2 × SFP+。
+4 x 2.5G RJ45 + 2 x SFP+。
 
 ## 状态
 
@@ -10,7 +10,7 @@
 | 型号 | `ZX-SWTG024AS` |
 | PCB | `PCB-SWTG024AS-V1.0-16584` |
 | 主控 | RTL8372 |
-| 端口 | 4 × 2.5G + 2 × SFP+ |
+| 端口 | 4 x 2.5G + 2 x SFP+ |
 | 固件 | `V0.2.2` |
 | 镜像 | 512 KB，不做 4 MB padding |
 
@@ -49,14 +49,14 @@ SFP5/6            -> 单色绿灯
 ```sh
 make MACHINE=ZX-SWTG024AS \
      CONFIG=config/default.txt \
-     VERSION=0.2.1
+     VERSION=0.2.2
 ```
 
 镜像固定 524288 字节。
 
 ## 刷写
 
-当前机器没有原厂固件备份，使用编程器写 512 KB 镜像，校验后上电。
+使用编程器写 512 KB 镜像，校验后上电。
 
 ## 文档
 
@@ -66,8 +66,8 @@ make MACHINE=ZX-SWTG024AS \
 
 ## CI
 
-`ci/build-zx.yml` 会构建并检查 512 KB。启用方法见 [ci/README.md](ci/README.md)。
+`.github/workflows/build-zx.yml` 会构建并检查 512 KB。
 
-## English
+## 英文
 
 [README.md](README.md)

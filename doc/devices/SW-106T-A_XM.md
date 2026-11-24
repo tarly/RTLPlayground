@@ -6,7 +6,7 @@
 | SoC | RTL8372N |
 | Copper | 4 x 2.5G RJ45 |
 | Uplink | 2 x SFP+ |
-| Flash | 32 Mbit SPI, DIO |
+| Flash | 8 Mbit / 1 MB (stock); the development unit has a 4 MB part fitted by the maintainer |
 | Final firmware | V0.2.6 |
 
 ## Ports

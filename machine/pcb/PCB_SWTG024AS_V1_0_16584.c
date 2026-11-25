@@ -36,4 +36,8 @@ __code const struct machine machine = {
 			0,
 		},
 	},
+	/* Local variant: units re-fitted with a 2 MB part keep the MAC in the last
+	 * sector. The stock board has no factory MAC, so the upstream definition
+	 * leaves this at 0. */
+	.mac_flash_offset = 0x1FC000,
 };

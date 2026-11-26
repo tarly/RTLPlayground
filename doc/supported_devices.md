@@ -19,7 +19,7 @@ The following devices have been tested and are fully working:
 | Hisource | Hi-K0402WS      | No      | [PCB-K0402W-V3.0](devices/PCB-K0402W-V3.0.md)                                         |       | 4 + 2 |
 | Hisource | Hi-K0801WS      | No      | [PCB-K0801W-V2.0](devices/PCB-K0801W-V2.0.md)                                         |       | 8 + 1 |
 | hongyavision | HYWS-SGT0204S | No    | [2G5F4_10G2_V1.01](devices/2G5F4_10G2_V1.01.md)                                       | 0.5M  | 4 + 2 |
-| hongyavision | HYWS-SGT0204S V1.04 | No | [HYWS-SGT0204S](devices/HYWS-SGT0204S.md)                                          | 0.5M  | 4 + 2 |
+| hongyavision | HYWS-SGT0204S V1.04 | No | [2G5F4_10G2_V1.04](devices/2G5F4_10G2_V1.04.md)                                          | 0.5M  | 4 + 2 |
 | hongyavision | LG-SG5T1    | No      | [PCB-SWTG024AS-V2.0_16895](devices/PCB-SWTG024AS-V2.0_16895.md)                       | 0.5M  | 5 + 1 |
 | hongyavision | LG-SG5T1 (WEB) | Yes  | [PCB-SWTG024AS-A-V2.0.1_19650](devices/PCB-SWTG024AS-A-V2.0.1_19650.md)               | 2M    | 5 + 1 |
 | Horaco   | HC-SWTG124AS    | Yes     | [PCB-SWTG024AS-A-V2.0.1_19650](devices/PCB-SWTG024AS-A-V2.0.1_19650.md)               | 2M    | 4 + 2 |

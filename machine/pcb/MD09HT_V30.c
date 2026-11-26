@@ -35,7 +35,10 @@ __code const struct machine machine = {
 	.mdi_cfg = MDI_CFG(MDI_SWAPPED, MDI_SWAPPED, MDI_STRAIGHT, MDI_STRAIGHT),
     .high_leds = { .mux = LED_28_SYS | LED_29, .enable = LED_27 | LED_28_SYS | LED_29 },
     .port_led_set = { 0, 0, 0, 3, 2, 2, 0, 0, 3 },
-    .mac_flash_offset = 0,
+/* Local variant: units re-fitted with a larger part keep the MAC in the last
+	 * sector. The stock board has no factory MAC, so the upstream definition
+	 * keeps this at 0. */
+	.mac_flash_offset = 0x1FC000,
     .led_sets = {
         { // RJ45 ports 3-4 (normal wiring)
             LEDS_1G | LEDS_100M | LEDS_10M | LEDS_LINK | LEDS_ACT,

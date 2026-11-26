@@ -66,6 +66,10 @@ __code const struct machine machine = {
 		0x3f, 0x19, 0x3f, 0x3f,					/* pads 20-23 */
 		0x1c, 0x1d, 0x20, 0x3f					/* pads 24-27 */
 	},
+	/* Local variant: units re-fitted with a larger part keep the MAC in the last
+	 * sector. The stock board has no factory MAC, so the upstream definition
+	 * leaves this at 0. */
+	.mac_flash_offset = 0x1FC000,
 };
 
 MACHINE_CUSTOM_INIT(

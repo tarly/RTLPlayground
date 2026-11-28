@@ -187,15 +187,15 @@ every registered machine.
 ## 6. Token consumption (as of 2026-11-28 23:45)
 
 How this is measured: the usage recorded step by step in the local DSH session logs
-(`~/.dsh/sessions/`) is summed over **the four devices plus the coordination session, six
+(`~/.dsh/sessions/`) is summed over **the four devices plus the project-wide coordination session, six
 sessions in total**; sessions of other projects on the same machine are excluded. Cost uses
 DeepSeek's `deepseek-flash` (V4.1-Flash-1017) **peak** rates: cache hit $0.006/M, cache miss
 $0.30/M, output $1.20/M.
 
 | Device / role | Sessions | Steps | Input, cache miss | Output | Input, cache hit | Total tokens | Peak cost |
 |---|---|---|---|---|---|---|---|
+| Project-wide coordination, sweeps and PRs | 1 | 915 | 10,438,539 | 785,585 | 315,663,360 | 326,887,484 | $5.97 |
 | Xiaomi SW-106T-A | 2 | 1808 | 6,939,322 | 1,632,369 | 781,152,256 | 789,723,947 | $8.72 |
-| Coordination | 1 | 915 | 10,438,539 | 785,585 | 315,663,360 | 326,887,484 | $5.97 |
 | HYWS-SGT0204S | 1 | 354 | 3,208,905 | 395,540 | 114,015,744 | 117,620,189 | $2.12 |
 | MERCURY SE106 Pro | 1 | 258 | 2,252,454 | 279,982 | 62,684,800 | 65,217,236 | $1.39 |
 | ZX SWTG024AS | 1 | 18 | 108,680 | 17,573 | 811,008 | 937,261 | $0.06 |
@@ -217,7 +217,7 @@ Notes:
 - **The Xiaomi board accounts for about half the cost** ($8.72 of $18.26): 98% of that comes
   from the first session, which took the stock flash apart with binwalk to work out the GPIO
   layout - 1776 steps.
-- **The coordination session is the second largest** ($5.97): it re-reads a large context on
+- **Project-wide coordination, sweeps and PRs is the second largest** ($5.97): it re-reads a large context on
   every turn, so it has the highest cache-miss input of the six.
 - **ZX cost $0.06** (18 steps) - its board file was a copy-and-adjust of the Xiaomi one, which
   shows how cheap another device becomes once the pattern exists.

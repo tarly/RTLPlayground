@@ -1,456 +1,157 @@
-# RTLPlayground
-A Playground for Firmware development for advanced user of RTL8372/RTL8373 based 2.5GBit Switches.
-
-For each hardware configuration of these devices, there is usually a managed and an
-unmanaged version sold, with mostly identical hardware. The aim is to provide management
-features also for unmanaged devices with additional features such as Management VLAN,
-DHCP servers, multi-language support, IPv6 and TLS-encrypted web-pages. At present, however
-only the following features are provided:
-- A modern web-interface with mouse-over to display further information
-- A serial console interface to configure all features
-- IGMP to configure Multicast streaming
-- Port configuration showing detailed information about own and Link-partner advertised
-  Speed settings and configuration of these settings on the local side
-- Per-port configuration of frame sizes (MTUs) for Jumbo-Frame support or limiting MTUs
-  for particular devices
-- EEE (Energy Efficient Ethernet) can be configured per-port. Detailed information is
-  provided for support offered by the link partner and the EEE status of a port.
-- VLAN configuration
-- SFP information is displayed on the inserted modules, the current sensor values such as
-  temperatures, RX and TX power are displayed in the CLI and as mouse-over on the web
-- Mirror configuration
-- Link Aggregation Groups can be set up
-- Detailed information on port packet statistics
-- Configuration saved to flash via the web-interface
-- Firmware updates via the web
-- Installation as a firmware upgrade from the original web-interface
-
-<img width="1673" height="977" alt="GUI" src="doc/images/gui.png" />
-
-While the firmware provides already considerable improvements over the original managed firmware,
-the firmware still lacks support for the proprietary loop prevention
-protocols as well as DHCP. Spanning Tree is available (see doc/stp.md), but is
-a simplified implementation - read that document before enabling it on a
-switch you administer over the network. If you need these features, do not install the playground on your managed
-devices. In any case, installation is strongly discouraged unless you can at least make
-a backup of the original flash content via a SOIC clamp such as also used for BIOS
-backups and can re-install that firmware in case something is wrong. For this no soldering
-skills are necessary.
-
-The firmware supports all hardware features of devices with
-- 4 2.5GBit ports + 2 SFP+ ports
-- 5 2.5GBIT + 1 SFP+ port
-- 8 2.5GBit + 1 SFP+ port
-Devices sold usually have a fairly common design, however there may be differences in the LED
-configuration (switches have LEDs with different colours and use types of LEDs). The list
-of tested devices can be found in [Supported devices](doc/supported_devices.md).
-
-To do meaningful development you will need to use a serial console, so soldering skills
-are required. Flashing must be done via a SOIC-8 PatchClamp or by soldering a socket
-for the flash chip.
-
-If you don't want to open your device, you can use the project's code to learn about the
-devices by looking at the image using e.g. Ghidra. If you want to contribute to the
-design of the web-interface or get a feeling for the interface first, a standalone
-device simulator is provided, which runs entirely under Linux as a local webserver.
-
-## (0) Compiling Requirements
-
-Install the following particular build requisites (Debian 12/13):
-```
-sudo apt install make gcc g++ pkg-config bison flex libboost-dev patch bzip2 curl xxd jq python-is-python3 libjson-c-dev zlib1g-dev
-```
-
-The first `make` downloads SDCC 4.6.0, applies the fixes in `sdcc/` and builds it into
-`toolchain/`, which takes a few minutes. Later builds reuse it. The released SDCC 4.5.0
-and 4.6.0 miscompile parts of this code, see [SDCC bug #4153](https://sourceforge.net/p/sdcc/bugs/4153/)
-and [#4154](https://sourceforge.net/p/sdcc/bugs/4154/); both fixes are in SDCC trunk since
-r17039. The third patch is for [#4070](https://sourceforge.net/p/sdcc/bugs/4070/), where the
-assembler drops the top byte of a `__sfr32` address list; it is proposed upstream and lets
-`SFR_DATA_U32` be used again. To use an SDCC you installed yourself instead, run `make CC=sdcc ...`.
-
-<details>
-<summary>If using Docker (click to expand)</summary>
-
-### Prerequisites
-
-Install Docker for your platform:
-
-- **Linux (Debian/Ubuntu)**: `sudo apt install docker.io` then `sudo usermod -aG docker $USER` (log out and back in)
-- **Linux (other distros)**: Follow the [Docker Engine install guide](https://docs.docker.com/engine/install/)
-- **Windows**: Install [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/)
-- **macOS**: Install [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/)
-
-### Usage
-
-A Dockerfile is provided for a reproducible build environment:
-
-```
-docker build -t rtlplayground-dev .
-```
-
-Build the firmware (replace MACHINE with your target, e.g. `DEFAULT_8C_1SFP`):
-
-```
-docker run --rm -v $(pwd):/workspace rtlplayground-dev make MACHINE=DEFAULT_8C_1SFP
-```
-
-The resulting `.bin` file appears in `output/` on your host.
-
-Build the OEM web upgrade bin (after building the firmware bin)
-
-```
-docker run --rm -v $(pwd):/workspace rtlplayground-dev make -C installer
-```
-
-The resulting `rtlplayground_oem_upgrade.bin` file appears in `installer/output/` on your host.
-
-Build host tools only:
-
-```
-docker run --rm -v $(pwd):/workspace rtlplayground-dev make -C tools
-```
-
-Run the web-interface simulator through docker:
-
-```
-docker run --rm -p 8081:8081 -v $(pwd):/workspace rtlplayground-dev \
-  tools/output/httpd_sim.py /workspace/html
-```
-
-Edit `config.txt` on your host, then re-run `make` — the
-source directory is mounted into the container, so changes take effect
-immediately. To build for a different machine, pass `MACHINE=<name>`, which
-selects the matching entry in `machine/machines.json` (see
-[Adding a new device](doc/adding-a-device.md)).
-
-</details>
-
-## (1) Compiling for direct chip flashing AND upgrading an existing RTLPlayground running device
-
-Pass the machine that matches your device, for example:
-```
-make MACHINE=DEFAULT_8C_1SFP
-```
-The name selects the matching entry in `machine/machines.json`, which contains
-the `friendly_name` and PCB source; `make` without a `MACHINE` value stops with
-an error listing what is expected. If your board is not in the list yet, see
-[Adding a new device](doc/adding-a-device.md).
-
-To build a generic image directly from a PCB definition, pass its source name
-without the `.c` extension:
-```
-make PCB=PCB_K0402W_V2_0
-```
-This selects `machine/pcb/PCB_K0402W_V2_0.c` and uses
-`GENERIC_PCB_K0402W_V2_0` as the machine name. Specify only one of `PCB` or
-`MACHINE`.
-
-To embed a machine-specific startup configuration, pass `CONFIG`:
-```
-make MACHINE=DEFAULT_8C_1SFP CONFIG=configs/DEFAULT_8C_1SFP.txt
-```
-`CONFIG` defaults to `config.txt`; the selected file is embedded in the image
-and changing it triggers a rebuild.
-
-To choose the output directory while keeping the automatic file name (with
-version, git hash and machine), pass `OUTPUT_DIR`:
-```
-make MACHINE=DEFAULT_8C_1SFP OUTPUT_DIR=/tmp/firmware
-```
-To also change the leading part of the name while keeping that automatic
-suffix, use `OUTPUT_PREFIX` (it is prepended verbatim):
-```
-make MACHINE=DEFAULT_8C_1SFP OUTPUT_DIR=/tmp/firmware OUTPUT_PREFIX=my-switch-
-```
-This produces `/tmp/firmware/my-switch-v<version>-<git>-<machine>.bin`.
-To set the complete file name inside `OUTPUT_DIR`, use `OUTPUT_NAME` (it replaces
-the automatic name, so the version/git suffix is not appended):
-```
-make MACHINE=DEFAULT_8C_1SFP OUTPUT_DIR=/tmp/firmware OUTPUT_NAME=my-switch.bin
-```
-`OUTPUT_PREFIX` and `OUTPUT_NAME` are alternatives: use only one of them. If
-`OUTPUT_NAME` is set, `OUTPUT_PREFIX` is ignored.
-To set the complete path and file name at once, use `OUTPUT`:
-```
-make MACHINE=DEFAULT_8C_1SFP OUTPUT=/tmp/firmware/my-switch.bin
-```
-When `OUTPUT` is a custom path, `output/rtlplayground.bin` is left untouched:
-only the default build updates that symlink (and the installer uses it).
-Without overrides the image is `output/<machine>/rtlplayground-v<version>-<git>-<machine>.bin`.
-`BUILDDIR` still selects where intermediate objects and tools are written.
-
-> [!TIP]
-> You can write configuration parameters in config.txt (see below) in order your switch to get
-> straight at the first boot, a correct IP configuration.
-
-Now, building the firmware image should work.
-
-Note, that the image generated ends in .bin, not .img, in order to make IMSProg happy.
-
-image location is stored in `RTLPlayground/output/rtlplayground_version_machine.bin`
-for example
-```
-rtlplayground-v0.1.0-12c98ba-dirty-LIANGUO_ZX_SWTGW215AS.bin
-```
-
-> [!CAUTION]
-> This image can be flashed directly to the chip OR through the firmware update/upgrade
-> interface of RTLPlayground interface
-
-## (2) Compiling for OEM running device with management options (web upgrade)
-
-Managed switches can be updated from the existing original firmware using a SPECIFIC upgrade image.
-You first need to build the firmware for direct chip flashing : See below (1)
-
-Then
-
-```
-cd installer
-make 
-```
-image location is stored in  `RTLPlayground/installer/output/rtlplayground_oem_upgrade.bin`
-
-> [!CAUTION]
-> This image must ONLY be used for original OEM firmware web interface firmware upgrade.
-> You do not need this image if you are already on RTLplayground firmware.
-> Unless you go back to the original OEM firmware, you would only flash this specific firmware
-> only once. Future upgrades of RTLPlayground will only need to follow (1)
-
-example of compilation console output
-
-```
-RTLPlayground/installer$ make
-mkdir -p output
-gcc updatebuilder.c -o output/updatebuilder
-../toolchain/sdcc-3390765201/bin/sdas8051 -plosgff -o output/crtstart.rel crtstart.asm
-../toolchain/sdcc-3390765201/bin/sdcc -mmcs51 --code-loc 0x1000 -o output/installer.rel -c installer.c
-../toolchain/sdcc-3390765201/bin/sdcc -mmcs51 -Wl-bHOME=0x1100 -Wl-r -o output/rtlinstaller.ihx output/crtstart.rel output/installer.rel
-./output/updatebuilder -i output/rtlinstaller.ihx -o output/rtlplayground_oem_upgrade.bin ../output/rtlplayground.bin
-Input file size: 524288
-Bytes read: 524288
-EOF
-Payload sum 1 is: 0x25100
-Payload sum 2 is: 0x25100
-Payload sum with header is: 0x264ec
-Payload sum is: 0xf8fe94
-Header checksum is: 0x5a1
-```
-
-## (3) Sandbox Usage with Ghidra (optional)
-
-You can play with the image using ghidra or flash real Switch Hardware. For
-ghidra see this information about [Ghidra images](doc/ghidra.md).
-
-## (4) Installation through the Web interface (software way)
-
-Managed switches (OEM firmware of RTLplayground firmware) can be upgraded via the web interface.
-Unmanaged switch cannot be flashed this way (see 5).
-
-Go to "Firmware update" tab, select the correct file.
-
-> [!IMPORTANT]
-> If your device already runs RTLPlayground, you must upload the binary file /RTLPlayground/output/rtlplayground_Version_Machine.bin
-> If your device is OEM, you must upload the binary file /RTLPlayground/installer/output/rtlplayground_oem_upgrade.bin
-
-> [!CAUTION]
-> Check one more time that your device matches the machine type before flashing.
-> Be sure you have a backup of the original firmware before diving in RTLPlayground.
-
-Finally, push the Upload File Button and you're done !
-
-
-## (5) Flashing the ROM directly (hardware way, but also only way to rescue)
-
-This procedure is the only way to flash unmanaged switches, if the ROM chip is large enough.
-This is also the only way to unbrick your device if something went wrong.
-
-> [!IMPORTANT]
-> You need a SOIC-8 clip to flash the ROM chip directly onboard.
-> Alternatively you can de-solder the flash chip and install a SOIC adapter).
-> For flashing the chip directly, you must use the binary file /RTLPlayground/output/rtlplayground_Version_Machine.bin
-
-> [!CAUTION]
-> As you need to open your switch case, consider that the warranty is gone.
-
-- Disconnect power from switch.
-- Open the switch.
-- Attach the clip onto the flash chip (Red line on Pin 1, Pin 1 has a point marker).
-- Connect USB of flash programmer, the power LED on the switch will light up, check cabling if not.
-- Don't panic, mixing up GND and 3.3V usually does not destroy the switch.
-- Use IMSProg, Flashrom, or whatever Programmer to detect the chip.
-- MAKE A BACKUP (DUMP) OF THE EXISTING FIRMWARE !
-- ERASE THE ROM (BLANK) !
-- Load the firmware into IMSProg.
-- Flash is to the ROM chip.
-- Disconnect the clip from the ROM chip.
-- You're done, ready for the first boot.
-
-## (6) Connecting a serial interface (optional)
-
-You can connect a serial cable to the UART port found on all the devices, set 8N1 @ 115200 baud.
-
-## (7) Power Up
-
-When you power up the switch, the device will perform some examples and provide a minimal console
-(if wired to a serial interface), the documentation of which can be found in the source code rtlplayground.c`.
-
-## (8) The web-interface
-
-The web-interface can be reached under the [default 192.168.10.247](http://192.168.10.247) unless you
-specified an IP address in the config.txt before compilation.
-
-> [!TIP]
-> The default password is `1234`.
-
-## (9) The command line
-
-The command line is very rudimentary and mostly for testing purposes.
-The following is a boot-log with some examples:
-```
-Detecting CPU
-RTL8373 detected
-Starting up...
-  Flash controller
-
-NIC reset
-rtl8372_init called
-
-RTL837X_REG_SDS_MODES: 0x00000bed
-
-phy_config_8224 called
-
-phy_config_8224 done
-
-rtl8224_phy_enable called
-
-rtl8224_phy_enable done
-
-rtl8372_init done
-
-A minimal prompt to explore the RTL8372:
-
-CPU detected: RTL8373
-Clock register: 0x00001101
-Register 0x7b20/RTL837X_REG_SDS_MODES: 0x00000bed
-Verifying PHY settings:
-
- Port   State   Link    TxGood          TxBad           RxGood          RxBad
-1       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-2       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-3       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-4       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-5       On      2.5G    0x00000008      0x00000000      0x00000000      0x00000000
-6       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-7       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-8       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-9       NO SFP  Down    0x00000000      0x00000000      0x00000000      0x00000000
-
-> port 5 1g
-  CMD: port 5 1g
-PORT 04 1G
-
-> stat
-  CMD: stat
- Port   State   Link    TxGood          TxBad           RxGood          RxBad
-1       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-2       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-3       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-4       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-5       On      1000M   0x00000035      0x00000000      0x00000017      0x00000000
-6       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-7       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-8       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-9       NO SFP  Down    0x00000000      0x00000000      0x00000000      0x00000000
-
+# RTLPlayground 本地机型说明（tarly 的 4 台设备）
+
+| 语言 | 文档 |
+|---|---|
+| **中文** | [README.md](README.md)（本页） |
+| English | [README.en.md](README.en.md) |
+
+---
+
+> **AI 辅助声明**
+> 本文档以及其中描述的板级适配工作，由 **AI 编码助手（DeepSeek Harness）**协助完成。
+> 所有改动均由作者在**真实设备**上复核、编译并实测；固件在写入前经过校验，
+> 结论均来自实机现象而非推测，未验证的部分在文中明确标注。
 >
-<SFP-RX OK>
+> **AI assistance declaration**
+> This document and the board support it describes were prepared with the help of an
+> **AI coding assistant (DeepSeek Harness)**. Every change was reviewed, built and tested
+> on the **actual hardware** by the author; images were verified before writing and the
+> results below come from measurements, not guesses. Anything not verified is marked as such.
 
-<MODULE INSERTED>  Rate: 67  Encoding: 01
-Lightron Inc.   WSPXG-ES3LC-IHA 0000
+---
 
-> stat
-  CMD: stat
- Port   State   Link    TxGood          TxBad           RxGood          RxBad
-1       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-2       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-3       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-4       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-5       On      1000M   0x00000065      0x00000000      0x0000003b      0x00000000
-6       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-7       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-8       On      Down    0x00000000      0x00000000      0x00000000      0x00000000
-9       SFP OK  10G     0x00000000      0x00000000      0x0000001c      0x00000000
+这份文档记录我在 `tarly/RTLPlayground` 上实际适配过的设备、实测结果和踩过的坑。
+上游已经合并的机型会标注出来，剩下的留在本地。
 
-> sfp
-  CMD: sfp
-Rate: 67  Encoding: 01
-Lightron Inc.   WSPXG-ES3LC-IHA 0000
+> 本分支（`local/device-notes`）**只放文档**；代码请看 `main`，它与上游保持同步、随时可 fast-forward。
+> 上游原始 README 保留在 [README.upstream.md](README.upstream.md)。
+
+## 一、总览
+
+| PCB | 品牌 / 型号 | 管理 | 端口 | 主控 | 闪存 | 构建 target | 状态 |
+|---|---|---|---|---|---|---|---|
+| `MD09HT` / `V30` | Xiaomi SW-106T-A | 否 | 4 × 2.5G + 2 × SFP+ | RTL8372N | 原厂 1 MiB cFeon `Q80C-104HIP`；实测机换 4 MiB | `XIAOMI_SW_106T_A` | **已合并上游**（PR #966） |
+| `PCB-SWTG024AS-V1.0-16584` | ZX SWTG024AS | 否 | 4 × 2.5G + 2 × SFP+ | RTL8372 | 原厂 1 MiB；实测机换 4 MiB | `ZX-SWTG024AS` | **已合并上游**（PR #1028） |
+| `2G5F4_10G2_V1.04` | hongyavision HYWS-SGT0204S | 否 | 4 × 2.5G + 2 × SFP+ | RTL8372 | 原厂 512 KiB `T25S40`；实测机换 4 MiB | `HONGYAVISION_HYWS_SGT0204S_V1_04` | 本地，待提 PR |
+| `SE106 Pro 1.0.0 R`（板号 `2088501190`） | 水星 MERCURY SE106 Pro | **是**（原厂 Web，RSA 签名升级） | 4 × 2.5G + 2 × SFP+ | RTL8372N | 4 MiB XMC `XM25QH32C` | 未命名 | **未完成**（镜像写入正确但不启动） |
+
+四台的共同点：都是 4 × 2.5GE + 2 × SFP+（1G/2.5G/10G），都用 512 KiB 镜像，
+三台无管理机型没有出厂 MAC。
+
+## 二、逐台说明
+
+### 1. Xiaomi SW-106T-A（`MD09HT` V30）
+
+```text
+主控      RTL8372N（regget 4 = 0x83727000），外挂 RTL8224N PHY
+端口      物理 RJ45 1-4 → 逻辑 4-7；左笼（SDS1，检测 GPIO38）→ 逻辑 8；右笼（SDS0，检测 GPIO37）→ 逻辑 3
+闪存      原厂 1 MiB cFeon Q80C-104HIP，背面还有一处空置 SOP-8 位；我这台换了 4 MiB
+MAC       无出厂 MAC，mac_flash_offset = 0，由芯片 UUID 派生（06: 前缀）
+MDI       铜口线序镜像：0xa90 必须写 0x03（默认 0x0c 时物理 1、2 口不 link）
+LED       铜口 绿=2.5G、橙=10M/100M/1G；每个 SFP 笼单灯（白，肉眼偏蓝），全速率共用
 ```
 
-## (10) Advanced configuration
-
-You can configure more deeply the switch without the need of the console mode.
-
-While in compilation part, you might write directly to config.txt file before making the binary firmware
-
-```
-nano config.txt
+```text
+make MACHINE=XIAOMI_SW_106T_A VERSION=<版本>
 ```
 
-If you want to modify settings after the flash is done, go to the System tab and find the Startup Configuration.
+**实测**：四个铜口 1G/2.5G 通、两个 SFP 笼 10G 通、灯全对、Web/CLI/VLAN/配置保存重启正常。
 
-<img width="1673" height="978" alt="ADVANCED SETTINGS" src="doc/images/advanced_settings.png" />
+**注意**：这台是本项目唯一需要改共享代码的机型——`struct machine` 新增 `mdi_cfg`，
+用 `MDI_CFG(MDI_SWAPPED, MDI_SWAPPED, MDI_STRAIGHT, MDI_STRAIGHT)` 表达，宏在 `machine.h`。
 
-```
-ip xxx.xxx.xxx.xxx      = IP address of the switch
-gw yyy.yyy.yyy.yyy      = IP address of the gateway
-netmask zzz.zzz.zzz.zzz = Network mask of the switch 
-port x name xxx         = Name xxx the port number x
-port z 1g               = Set 1g speed for port z
-igmp on/off             = Turn IGMP on or off
-session xxxx            = Web session timeout in seconds (default 3600)
-```
-[To be continue]
+### 2. ZX SWTG024AS（`PCB-SWTG024AS-V1.0-16584`，日期 2023-09-13）
 
-Enjoy playing!
-
-## (13) HTTP Simulator for front-end development
-
-The simulator is available in tools as `./httpd_sim.py`
-By default it will serve the content in the current working directory so the easiest way to run this is to:
-```
-cd ./html
-../tools/httpd_sim.py
-```
-And the simulator will be available on http://127.0.0.1:8081
-
-There are commandline options available:
-```
-usage: httpd_sim.py [-h] [--machine MACHINE] [--port PORT] [--bindaddr BINDADDR] [--verbose]
-
-options:
-  -h, --help           show this help message and exit
-  --machine MACHINE    path to machine.c or .h file to parse (optional)
-  --port PORT          port to bind to (default 8081)
-  --bindaddr BINDADDR  address to bind (default 127.0.0.1)
-  --verbose            enable verbose output
+```text
+主控      RTL8372（非 N）
+端口      物理 RJ45 1-4 → 逻辑 4-7；左笼（J4，SDS1，检测 GPIO30）→ 逻辑 8；右笼（J2，SDS0，检测 GPIO50）→ 逻辑 3
+闪存      原厂 1 MiB；我这台换了 4 MiB
+MAC       无出厂 MAC，派生同上
+LED       铜口 绿=2.5G、橙=其余速率；每个 SFP 笼单灯（绿），全速率共用一个槽位
+复位键    未贴片，reset_pin = GPIO_NA
 ```
 
-The machine parsing is somewhat experimental.
+```text
+make MACHINE=ZX-SWTG024AS VERSION=<版本>
+```
 
-## (12) Other documents
+**实测**：四铜口 2.5G/1G、双笼 10G、灯全对、Web/CLI/VLAN/配置正常。
 
-The following documents give further documentation on specific features of the RTL837x SoCs:
-- [Adding a new device](doc/adding-a-device.md)
-- [RTL8372/3 Feature support](doc/hardware.md)
-- [CPU Port](doc/CpuPort.md)
-- [L2 learning](doc/l2.md) 
-- [IGMP (IP-MC streaming)](doc/igmp.md)
-- [SFP+ ports](doc/sfp.md) 
-- [Trunking aka. port aggregation](doc/link_aggregation.md)
-- [LACP (802.3ad link aggregation)](doc/lacp.md)
-- [VLAN](doc/vlan.md)
-- [Storm control](doc/storm_control.md)
-- [Modifications and Flash replacement](doc/mods.md)
-- [Internal RAM and the stack](doc/internal-ram.md)
+**特点**：纯板级新增，**没有改任何共享代码**，diff 只有 `+131/−0`。
+
+### 3. hongyavision HYWS-SGT0204S（`2G5F4_10G2_V1.04`，日期 2024.09.19）
+
+```text
+主控      RTL8372（外挂 RTL8224 PHY），两颗 PPT PSM-4881 2.5G 端口模块
+端口      物理 RJ45 1-4 → 逻辑 4-7；SFP1（左，逻辑 8，SDS1，检测 GPIO38）；SFP2（右，逻辑 3，SDS0，检测 GPIO37）
+闪存      原厂 4 Mbit / 512 KiB，必须单线读（flash_sio = 1）；我这台换了 4 MiB
+MAC       无出厂 MAC，派生同上
+LED       铜口 白=2.5G、蓝=1000M L/A；每个 SFP 笼单灯；前面板另有 PWR
+串口      板上有 TTL 插针；RTLPlayground 115200 8N1，原厂 9600 8N1
+```
+
+```text
+make MACHINE=HONGYAVISION_HYWS_SGT0204S_V1_04 VERSION=<版本> CONFIG=<config.txt>
+```
+
+**与上游 V1.01 的关系**：`2G5F4_10G2_V1.01` 已在树里，但**两版 SFP 检测脚不同**
+（V1.01 用 GPIO30/GPIO50，本板是 GPIO38/GPIO37）；用 V1.01 的脚位时 `sfp` 命令两个笼都报空、
+且都不通流量。按规范，多版本必须带 `_V1_04` 后缀。
+
+**已知问题**：13 颗灯里有 **3 颗无法驱动**，其余灯位与端口、Web UI 都正常。
+正在借用同为该系列的 V1.01 实测配置做对照试验（`high_leds` 掩码、`port_led_set`、`led_sets` 结构）。
+
+### 4. 水星 MERCURY SE106 Pro（`SE106 Pro 1.0.0 R`，板号 `2088501190`）
+
+```text
+主控      RTL8372N（regget 4 = 0x83727000）
+端口      4 × 2.5G RJ45 + 2 × SFP+
+闪存      4 MiB XMC XM25QH32C（32 Mbit，3.3 V，DIO）
+原厂      带管理的 Web，升级校验 RSA 签名 → 只能编程器整片写入
+原厂启动  两段式：启动段 0x0–0x19000（入口 0x0dc3，带 rt_header 的 magic/头校验/负载校验/长度），
+          运行内核 0x1c000，配置区 0x1FB000
+```
+
+**状态：未完成。** 镜像写入确认正确（回读前 512 KiB 与源文件逐字节相同），但板子只有电源灯亮，
+12 颗端口灯全黑、任何口都不 link。
+
+已经排除的假设：
+
+| 假设 | 依据 |
+|---|---|
+| 镜像头格式不对 | 原厂 `00 40 02 0d c1`，我们 `00 40 02 00 a8`，都是「预取 0x4000 + LJMP」 |
+| 闪存时序参数不对 | 原厂代码写的 `CONFIG=9 / DIV=4 / RCMD=0xbb / TCONF=0x19` 与本源码一致 |
+| 写入失败 | 回读校验通过 |
+
+尚未分辨的三选一（外部表现完全一样）：**A** 启动 ROM 没交权、**B** 跑了但死在第一次邮箱写、
+**C** 端口灯不在 GPIO 0–27 上（点 GPIO 证明不了什么）。决定性手段是串口（板上有 TTL 插针，参数未测）。
+
+## 三、构建
+
+```bash
+git checkout main && git pull            # 小米、ZX 已在上游，直接从这里构建
+make MACHINE=XIAOMI_SW_106T_A VERSION=0.2.8
+make MACHINE=ZX-SWTG024AS VERSION=0.2.4
+
+git checkout local/device-notes          # HYWS 还在本地分支上
+make MACHINE=HONGYAVISION_HYWS_SGT0204S_V1_04 VERSION=0.2.12 CONFIG=config.txt
+```
+
+镜像固定 512 KiB；`CI=1` 会把警告当错误，`make machine_check` 编译全部机型。
+
+## 四、共通经验
+
+1. **无管理机没有 MAC**：`mac_flash_offset` 留 0，地址由 UUID 派生；要固定就用 `mac` 命令写进启动配置。
+2. **换更大闪存不等于需要改固件**：512 KiB 镜像在 1 MiB 和 4 MiB 上都一样跑；真正影响的是
+   `flash_sio`（有些 SPI NOR 不吃 Dual-I/O）。
+3. **单灯 SFP 只能用一个 led-set 槽位**：把低速塞进第二个槽位等于驱动一个不存在的灯。
+4. **`RTL837X_REG_LED_GLB_IO_EN` bit 6 要在 `machine_custom_init()` 置位**，否则「常亮」条件不起作用，
+   只有活动闪烁有效。
+5. **同一机型多 PCB 版本必须带版本后缀**（`_V1_04`），否则与已有条目冲突。
+
+## 五、参考
+
+- 上游仓库：<https://github.com/RTLPlayground/firmware>
+- 同系列 V1.01 的实测记录（LED-ID 映射、`FLASH_NO_DIO` 经验）：
+  <https://github.com/jzhou404gmail/RTLPlayground>
+- GPIO/复用全表：上游 `doc/gpio.md`（`GPIO31` = UART TX，找串口时有用）

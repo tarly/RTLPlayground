@@ -2,8 +2,8 @@
 
 | Language | Document |
 |---|---|
-| 中文 | [MY-DEVICES.md](MY-DEVICES.md) |
-| **English** | [MY-DEVICES.en.md](MY-DEVICES.en.md) (this page) |
+| 中文 | [README.md](README.md) |
+| **English** | [README.en.md](README.en.md) (this page) |
 
 ---
 
@@ -25,8 +25,9 @@ This document records the devices I have actually ported in `tarly/RTLPlayground
 measured, and the traps that cost time. Boards that are already upstream are marked; the rest
 stay local.
 
-> The file lives on the `local/device-notes` branch. It does **not** overwrite the upstream
-> `README.md` and is **not** on `main`, so `main` can still be fast-forwarded to upstream.
+> This branch (`local/device-notes`) holds **documentation only**; the code lives on `main`,
+> which stays in sync with upstream and can always be fast-forwarded.
+> The original upstream README is kept as [README.upstream.md](README.upstream.md).
 
 ## 1. Overview
 

@@ -1,5 +1,25 @@
 # RTLPlayground 本地机型说明（tarly 的 4 台设备）
 
+| 语言 | 文档 |
+|---|---|
+| **中文** | [MY-DEVICES.md](MY-DEVICES.md)（本页） |
+| English | [MY-DEVICES.en.md](MY-DEVICES.en.md) |
+
+---
+
+> **AI 辅助声明**
+> 本文档以及其中描述的板级适配工作，由 **AI 编码助手（DeepSeek Harness）**协助完成。
+> 所有改动均由作者在**真实设备**上复核、编译并实测；固件在写入前经过校验，
+> 结论均来自实机现象而非推测，未验证的部分在文中明确标注。
+>
+> **AI assistance declaration**
+> This document and the board support it describes were prepared with the help of an
+> **AI coding assistant (DeepSeek Harness)**. Every change was reviewed, built and tested
+> on the **actual hardware** by the author; images were verified before writing and the
+> results below come from measurements, not guesses. Anything not verified is marked as such.
+
+---
+
 这份文档记录我在 `tarly/RTLPlayground` 上实际适配过的设备、实测结果和踩过的坑。
 上游已经合并的机型会标注出来，剩下的留在本地。
 
@@ -100,7 +120,7 @@ make MACHINE=HONGYAVISION_HYWS_SGT0204S_V1_04 VERSION=<版本> CONFIG=<config.tx
 | 假设 | 依据 |
 |---|---|
 | 镜像头格式不对 | 原厂 `00 40 02 0d c1`，我们 `00 40 02 00 a8`，都是「预取 0x4000 + LJMP」 |
-| 闪存时序参数不对 | 原厂代码写的 `CONFIG=9 / DIV=4 / RCMD=0xbb / TCONF=0x19` 本源码一致 |
+| 闪存时序参数不对 | 原厂代码写的 `CONFIG=9 / DIV=4 / RCMD=0xbb / TCONF=0x19` 与本源码一致 |
 | 写入失败 | 回读校验通过 |
 
 尚未分辨的三选一（外部表现完全一样）：**A** 启动 ROM 没交权、**B** 跑了但死在第一次邮箱写、
